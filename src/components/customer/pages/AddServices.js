@@ -1,0 +1,335 @@
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { PacmanLoader } from "react-spinners";
+import { toast } from "react-toastify";
+import { db, storage } from "../../../Firebase";
+import { addDoc, collection, doc, getDoc, onSnapshot, orderBy, query, Timestamp, where } from "firebase/firestore";
+import { getDownloadURL, uploadBytesResumable, ref } from 'firebase/storage';
+
+export default function AddServices() {
+    const nav = useNavigate();
+    var [machineName, setmachineName] = useState("");
+    var [brandname, setbrandname] = useState("");
+    var [machinecost, setmachinecost] = useState("");
+    var [purchasedate, setpurchasedate] = useState("");
+    var [description, setdescription] = useState("");
+    var [warrentydate, setwarrentydate] = useState("");
+    var [serviceDate, setserviceDate] = useState(null);
+    var [technician, settechnician] = useState("");
+    var [technicianContact, settechnicianContact] = useState("");
+    var [nextdate, setnextdate] = useState("");
+    var [nextdatenum, setnextdatenum] = useState("");
+    var [ResponsiblemanagerId, setResponsiblemanagerId] = useState("");
+    var [ResponsiblemanagerName, setResponsiblemanagerName] = useState("");
+    var [loading, setloading] = useState(false);
+
+
+    var spinnerObj = {
+        margin: "100px auto",
+        display: "block",
+        borderColor: "red",
+    };
+
+
+    useEffect(() => {
+        getMachine()
+    }, [])
+
+    const params = useParams()
+    const id = params.id
+
+    const getMachine = async () => {
+        const machineRef = doc(db, "/machine", id);
+
+        let machineSnap = await getDoc(machineRef);
+
+        if (machineSnap.exists()) {
+            let machineData = machineSnap.data();
+
+            setmachineName(machineData?.name + " " + machineData?.modelnumber)
+            setmachinecost(machineData?.machinecost)
+            setbrandname(machineData?.brandname)
+            setpurchasedate(machineData?.purchasedate)
+            setwarrentydate(machineData?.warrentydate)
+            setResponsiblemanagerId(machineData?.ResponsiblemanagerId)
+            setResponsiblemanagerName(machineData?.ResponsiblemanagerName)
+            let today = new Date().toISOString().substr(0, 10);
+            setserviceDate(today);
+        }
+
+    }
+
+    const handleForm = async (e) => {
+        e.preventDefault();
+        setloading(true);
+        try {
+            let machineRef = collection(db, "/services");
+            await addDoc(machineRef, {
+                machineName: machineName,
+                machineId: id,
+                brandname: brandname,
+                machinecost: machinecost,
+                purchasedate: purchasedate,
+                warrentydate: warrentydate,
+                serviceDate: serviceDate,
+                description: description,
+                ResponsiblemanagerId: ResponsiblemanagerId,
+                ResponsiblemanagerName: ResponsiblemanagerName,
+                createdAt: Timestamp.now(),
+                technician: technician,
+                technicianContact: technicianContact,
+                status: true,
+                nextdate: nextdate,
+                nextdatenum: nextdatenum
+            });
+            setloading(false);
+            nav("/manage-service");
+
+            setTimeout(() => {
+                toast.success("New Service Added");
+            }, 500);
+        } catch (error) {
+            setloading(false);
+            toast.error("Something Went Wrong");
+            console.log("Error in add service", error);
+        }
+    };
+
+    const handleNextDate = (e) => {
+        setnextdate(e.target.value);
+        let nextd = Date.parse(nextdate);
+        setnextdatenum(nextd);
+    }
+
+    return (
+        <>
+            <section id="breadcrumbs" className="breadcrumbs">
+                <div className="container">
+                    <ol>
+                        <Link to="/home">
+                            <li className="breadcrumb-item active" aria-current="page">
+                                Home
+                            </li>
+                        </Link>
+                        /
+                        <Link >
+                            {" "}
+                            <li
+                                className="breadcrumb-item active text-info active"
+                                aria-current="page"
+                            >
+                                {" "}
+                                Add Service
+                            </li>
+                        </Link>
+                    </ol>
+                    <h2>Add Service</h2>
+                </div>
+            </section>
+
+            <PacmanLoader
+                color="#0F4277"
+                loading={loading}
+                cssOverride={spinnerObj}
+                size={25}
+                aria-label="Loading Spinner"
+                data-testid="loader"
+            />
+            <div className={loading && "display-none"}>
+                <section id="contact" className="contact">
+                    <div className="container" data-aos="fade-up">
+                        <div className="row">
+                            <div className="col-lg-3"></div>
+
+                            <div className="col-lg-6 mt-5 mt-lg-0 d-flex align-items-stretch">
+                                <form
+                                    onSubmit={handleForm}
+                                    action="forms/contact.php"
+                                    method="post"
+                                    role="form"
+                                    className="php-email-form"
+                                >
+                                    <div className="row">
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="name">Machine & Model</label>
+                                            <input
+                                                type="text"
+                                                name="name"
+                                                value={machineName}
+                                                onChange={(e) => {
+                                                    setmachineName(e.target.value);
+                                                }}
+                                                className="form-control"
+                                                id="name" readOnly
+                                            />
+                                        </div>
+
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="Brand Name">Brand Name</label>
+                                            <input
+                                                type="text"
+                                                name="Brand Name"
+                                                value={brandname}
+                                                onChange={(e) => {
+                                                    setbrandname(e.target.value);
+                                                }}
+                                                className="form-control"
+                                                id="Brand Name" readOnly
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="row">
+
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="Machine Cost">Machine Cost</label>
+                                            <input
+                                                type="number"
+                                                name="Machine Cost"
+                                                value={machinecost}
+                                                onChange={(e) => {
+                                                    setmachinecost(e.target.value);
+                                                }}
+                                                className="form-control"
+                                                id="Machine Cost" readOnly
+                                            />
+                                        </div>
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="Purchase Date"> Purchase Date</label>
+                                            <input
+                                                type="date"
+                                                name="Purchase Date"
+                                                value={purchasedate}
+                                                onChange={(e) => {
+                                                    setpurchasedate(e.target.value);
+                                                }}
+                                                className="form-control"
+                                                id="Purchase Date" readOnly
+                                            />
+                                        </div>
+                                    </div>
+
+
+
+                                    <div className="row">
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="Warranty Expiry Date">
+                                                {" "}
+                                                Warranty Expiry Date
+                                            </label>
+                                            <input
+                                                type="date"
+                                                name="Warranty Expiry Date"
+                                                value={warrentydate}
+                                                onChange={(e) => {
+                                                    setwarrentydate(e.target.value);
+                                                }}
+                                                className="form-control"
+                                                id="Warranty Expiry Date"
+                                            />
+                                        </div>
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="Manager">Manager</label>
+                                            <input
+                                                type="text"
+                                                name="Manager"
+                                                value={ResponsiblemanagerName}
+                                                onChange={(e) => {
+                                                    setResponsiblemanagerName(e.target.value);
+                                                }}
+                                                className="form-control"
+                                                id="Manager" readOnly
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="row">
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="ServiceDate"> Service Date</label>
+                                            <input
+                                                type="date"
+                                                value={serviceDate}
+                                                onChange={(e) => {
+                                                    setserviceDate(e.target.value);
+                                                }}
+                                                name="ServiceDate"
+                                                className="form-control"
+                                                id="ServiceDate"
+                                            />
+                                        </div>
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="Next Date">
+                                                {" "}
+                                                Next Date
+                                            </label>
+                                            <input
+                                                type="date"
+                                                name="Next Date"
+                                                value={nextdate}
+                                                onChange={handleNextDate}
+                                                className="form-control"
+                                                id="Next Date"
+                                            />
+                                        </div>
+
+                                    </div>
+                                    <div className="row">
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="technician">Technician</label>
+                                            <div className="form-floating">
+                                                <input
+                                                    type="text"
+                                                    value={technician}
+                                                    onChange={(e) => {
+                                                        settechnician(e.target.value);
+                                                    }}
+                                                    name="Technician"
+                                                    className="form-control"
+                                                    id="Technician"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="form-group col-md-6">
+                                            <label htmlFor="technicianContact">Technician Contact</label>
+                                            <div className="form-floating">
+                                                <input
+                                                    type="text"
+                                                    value={technicianContact}
+                                                    onChange={(e) => {
+                                                        settechnicianContact(e.target.value);
+                                                    }}
+                                                    name="Technician Contact"
+                                                    className="form-control"
+                                                    id="Technician Contact"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="row mb-4">
+                                        <div className="col-lg-12">
+                                            <label htmlFor="description">Description</label>
+                                            <div className="form-floating">
+                                                <textarea
+                                                    className="form-control"
+                                                    id="description"
+                                                    style={{ height: "50px" }}
+                                                    value={description}
+                                                    onChange={(e) => {
+                                                        setdescription(e.target.value);
+                                                    }}
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                        <div className="text-center">
+                                            <button type="submit">Add Service</button>
+                                        </div>
+                                </form>
+                            </div>
+                            <div className="col-lg-3"></div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </>
+    );
+}
